@@ -14,57 +14,84 @@ class ParserTestCase(TestCase):
 
     def test_key_without_value(self):
         data = parse_line("key")
-        self.assertEqual(data, {'key': True})
+        self.assertEqual(data, {"key": True})
 
     def test_key_without_value_and_whitespace(self):
         data = parse_line("  key  ")
-        self.assertEqual(data, {'key': True})
+        self.assertEqual(data, {"key": True})
 
     def test_multiple_single_keys(self):
         data = parse_line("key1 key2")
-        self.assertEqual(data, {'key1': True, 'key2': True})
+        self.assertEqual(data, {"key1": True, "key2": True})
 
     def test_unquoted_value(self):
         data = parse_line("key=value")
-        self.assertEqual(data, {'key': "value"})
+        self.assertEqual(data, {"key": "value"})
 
     def test_pairs(self):
         data = parse_line("key1=value1 key2=value2")
-        self.assertEqual(data, {'key1': "value1", 'key2': "value2"})
+        self.assertEqual(data, {"key1": "value1", "key2": "value2"})
 
     def test_mixed_single_or_non_single_pairs(self):
         data = parse_line("key1=value1 key2")
-        self.assertEqual(data, {'key1': "value1", 'key2': True})
+        self.assertEqual(data, {"key1": "value1", "key2": True})
 
     def test_mixed_pairs_whatever_the_order(self):
         data = parse_line("key1 key2=value2")
-        self.assertEqual(data, {'key1': True, 'key2': "value2"})
+        self.assertEqual(data, {"key1": True, "key2": "value2"})
 
     def test_quoted_value(self):
         data = parse_line('key="quoted value"')
-        self.assertEqual(data, {'key': "quoted value"})
+        self.assertEqual(data, {"key": "quoted value"})
 
     def test_escaped_quote_value(self):
         data = parse_line('key="quoted \\" value" r="esc\t"')
-        self.assertEqual(data, {'key': 'quoted \" value', 'r': "esc\t"})
+        self.assertEqual(data, {"key": 'quoted " value', "r": "esc\t"})
 
     def test_mixed_pairs(self):
         data = parse_line('key1="quoted \\" value" key2 key3=value3')
-        self.assertEqual(data, {
-            'key1': 'quoted \" value', 'key2': True, 'key3': "value3"
-        })
+        self.assertEqual(data, {"key1": 'quoted " value', "key2": True, "key3": "value3"})
 
     def test_mixed_characters_pairs(self):
         data = parse_line('foo=bar a=14 baz="hello kitty" ƒ=2h3s cool%story=bro f %^asdf')
-        self.assertEqual(data, {
-            'foo': "bar", 'a': "14", 'baz': "hello kitty", 'ƒ': "2h3s",
-            "cool%story": "bro", 'f': True, "%^asdf": True
-        })
+        self.assertEqual(
+            data,
+            {
+                "foo": "bar",
+                "a": "14",
+                "baz": "hello kitty",
+                "ƒ": "2h3s",
+                "cool%story": "bro",
+                "f": True,
+                "%^asdf": True,
+            },
+        )
 
     def test_pair_with_empty_quote(self):
         data = parse_line('key=""')
-        self.assertEqual(data, {'key': ""})
+        self.assertEqual(data, {"key": ""})
 
     def test_single_character_value_at_end_of_string(self):
-        data = parse_line('key=a')
-        self.assertEqual(data, {'key': 'a'})
+        data = parse_line("key=a")
+        self.assertEqual(data, {"key": "a"})
+
+    def test_backslash_character_in_quoted_value(self):
+        data = parse_line('key_1=abc key_2="c:\\some\\path\\file.txt" key_3=def')
+        self.assertEqual({"key_1": "abc", "key_2": "c:\\some\\path\\file.txt", "key_3": "def"}, data)
+
+    def test_backslash_character_in_non_quoted_value(self):
+        data = parse_line("key_1=abc key_2=c:\\some\\path\\file.txt key_3=def")
+        self.assertEqual({"key_1": "abc", "key_2": "c:\\some\\path\\file.txt", "key_3": "def"}, data)
+
+    def test_backslash_character_at_the_end_of_quoted_value(self):
+        data = parse_line('key_1="c:\\" key_2=123')
+        # \\" means quoted " so it is not possible to parse it "properly"
+        self.assertEqual({"key_1": True}, data)
+
+    def test_backslash_character_at_the_end_of_non_quoted_value(self):
+        data = parse_line("key_1=c:\\ key_2=123")
+        self.assertEqual({"key_1": "c:\\", "key_2": "123"}, data)
+
+    def test_backslash_character_at_the_end_of_line(self):
+        data = parse_line("key_1=c:\\")
+        self.assertEqual({"key_1": "c:\\"}, data)

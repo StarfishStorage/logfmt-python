@@ -65,6 +65,9 @@ def parse_line(line):
                 output["".join(key).strip()] = "".join(value)
                 state = GARBAGE
             else:
+                if escaped:
+                    escaped = False
+                    value += ("\\",)
                 value += (c,)
             continue
     return output
